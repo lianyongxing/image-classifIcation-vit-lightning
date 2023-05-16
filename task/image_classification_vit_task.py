@@ -7,7 +7,10 @@ import pytorch_lightning as pl
 from transformers import AdamW
 import torch.nn as nn
 from model.vit import VitClsModel
+import torch.nn.functional as F
+import torch
 from dataset.basic_datasets import build_dataloader
+from sklearn.metrics import classification_report
 
 
 class ViTImageClassificationModel(pl.LightningModule):
@@ -16,6 +19,8 @@ class ViTImageClassificationModel(pl.LightningModule):
         self.args = args
         self.vit = VitClsModel(self.args.pretrain_path)
         self.get_dataloader()
+        self.criterion = nn.CrossEntropyLoss()
+
         # self.vit = VitClsModel("/Users/user/Desktop/model_file/vit-base-patch16-224")
 
     def forward(self, pixel_values):
@@ -27,8 +32,7 @@ class ViTImageClassificationModel(pl.LightningModule):
         labels = batch['labels']
         logits = self(pixel_values)
 
-        criterion = nn.CrossEntropyLoss()
-        loss = criterion(logits, labels)
+        loss = self.criterion(logits, labels)
         predictions = logits.argmax(-1)
         correct = (predictions == labels).sum().item()
         accuracy = correct / pixel_values.shape[0]
@@ -45,11 +49,37 @@ class ViTImageClassificationModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        loss, accuracy = self.common_step(batch, batch_idx)
-        self.log("validation_loss", loss, on_epoch=True)
-        self.log("validation_accuracy", accuracy, on_epoch=True)
+        # loss, accuracy = self.common_step(batch, batch_idx)
+        # self.log("validation_loss", loss, on_epoch=True)
+        # self.log("validation_accuracy", accuracy, on_epoch=True)
+        pixel_values = batch['pixel_values']
+        labels = batch['labels']
+        logits = self(pixel_values)
 
-        return loss
+        loss = self.criterion(logits, labels)
+
+        predict_scores = F.softmax(logits, dim=1)
+        predict_labels = torch.argmax(predict_scores, dim=-1)
+
+        cls_report = classification_report(labels.cpu(),predict_labels.cpu(), output_dict=True)
+        try:
+            cls_report_bcase = cls_report['1']
+            tf_board_logs = {
+                "valid_loss": loss,
+                "valid_acc": cls_report_bcase['precision'],
+                "valid_recall": cls_report_bcase['recall'],
+                "valid_f1": cls_report_bcase['f1-score']
+            }
+        except Exception as e:
+            print(cls_report)
+            tf_board_logs = {
+                "valid_loss": loss,
+                "valid_acc": 0,
+                "valid_recall": 0,
+                "valid_f1": 0
+            }
+        self.log_dict(tf_board_logs)
+        return {'loss': loss, 'log': tf_board_logs}
 
     def test_step(self, batch, batch_idx):
         loss, accuracy = self.common_step(batch, batch_idx)
@@ -62,7 +92,8 @@ class ViTImageClassificationModel(pl.LightningModule):
         return AdamW(self.parameters(), lr=5e-5)
 
     def get_dataloader(self):
-        self.train_dl, self.valid_dl = build_dataloader('/Users/user/Desktop/model_ViT/testdats.csv', batch_size=self.args.batch_size)
+        self.train_dl, self.valid_dl = build_dataloader('', batch_size=self.args.batch_size,
+                                                        vit_path=self.args.pretrain_path)
 
     def train_dataloader(self):
         return self.train_dl

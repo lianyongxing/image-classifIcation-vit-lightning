@@ -1,1 +1,1 @@
-python train.py --pretrain_path "/Users/user/Desktop/model_file/vit-base-patch16-224" --batch_size 4 --train_filepath '/Users/user/Desktop/model_ViT/testdats.csv' --save_path .
+nohup python train.py --pretrain_path /data/yxlian/image-classifIcation-vit-lightning/resources/vit-base-patch16-224 --save_path='vit_training_res' --gpu_num=1 --batch_size 64 --epochs 15 > vit_logs.log 2>&1 &

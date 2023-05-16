@@ -15,7 +15,8 @@ import json
 
 def get_parser():
     parser = argparse.ArgumentParser(description="Training")
-    parser.add_argument("--pretrain_path", required=True, type=str, help="bert config file")
+    parser.add_argument("--pretrain_path", default='google/vit-base-patch16-224-in21k', type=str,
+                        help="bert config file")
     parser.add_argument("--batch_size", type=int, default=8, help="batch size")
     parser.add_argument("--lr", type=float, default=2e-5, help="learning rate")
     parser.add_argument("--epochs", type=int, default=2, help="max epochs")
@@ -24,7 +25,6 @@ def get_parser():
     parser.add_argument("--weight_decay", default=1e-4, type=float, help="Weight decay if we apply some.")
     parser.add_argument("--adam_epsilon", default=1e-8, type=float, help="Epsilon for Adam optimizer.")
     parser.add_argument("--use_memory", action="store_true", help="load dataset to memory to accelerate.")
-    parser.add_argument("--max_length", default=256, type=int, help="max length of dataset")
     parser.add_argument("--train_filepath", required=True, type=str, help="train data path")
     parser.add_argument("--save_path", required=True, type=str, help="train data path")
     parser.add_argument("--save_topk", default=2, type=int, help="save topk checkpoint")
@@ -32,7 +32,6 @@ def get_parser():
     parser.add_argument("--hidden_dropout_prob", default=0.1, type=float, help="dropout probability")
     parser.add_argument("--tag", default='v001', type=str, help="version")
     parser.add_argument("--mode", default='train', type=str, help="version")
-    parser.add_argument("--model", default='bert', type=str, help="use pretrain model")
     parser.add_argument("--gpu_num", default=0, type=int, help="use gpu num")
     return parser
 

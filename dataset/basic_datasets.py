@@ -62,12 +62,13 @@ def image_dataset_transform_process(processor, trainset, validset):
     return trainset, validset
 
 
-def build_dataloader(fp, batch_size, vit_path="/Users/user/Desktop/model_file/vit-base-patch16-224"):
+def build_dataloader(fp, batch_size, vit_path):
     processor = ViTImageProcessor.from_pretrained(vit_path)
 
-    my_datasets = load_dataset('csv', data_files=fp,split="train")
-    my_datasets = my_datasets.train_test_split(test_size=0.2)
-    train_ds_raw, valid_ds_raw = my_datasets['train'], my_datasets['test']
+    train_ds_raw = load_dataset('csv', data_dir='/data/yxlian/leaderface/', data_files='trainset_leaderface01.csv',
+                                split='train')
+    valid_ds_raw = load_dataset('csv', data_dir='/data/yxlian/leaderface/', data_files='testset_leaderface01.csv',
+                                split='train')
 
     train_ds, valid_ds = image_dataset_transform_process(processor, train_ds_raw, valid_ds_raw)
 
