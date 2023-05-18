@@ -9,16 +9,28 @@ import torch.nn as nn
 from model.vit import VitClsModel
 import torch.nn.functional as F
 import torch
-from dataset.basic_datasets import build_dataloader
+from dataset.basic_datasets import build_dataloader, build_test_dataloader
 from sklearn.metrics import classification_report
+import argparse
+from types import SimpleNamespace
 
 
 class ViTImageClassificationModel(pl.LightningModule):
-    def __init__(self, args):
-        super(ViTImageClassificationModel, self).__init__()
+    def __init__(self, args: argparse.Namespace):
+        super().__init__()
+        print(args)
+        if isinstance(args, argparse.Namespace):
+            self.save_hyperparameters(args)
+        if isinstance(args, dict):
+            args = SimpleNamespace(**args)
+            args.mode = 'test'
+        else:
+            args.mode = 'train'
+
         self.args = args
         self.vit = VitClsModel(self.args.pretrain_path)
-        self.get_dataloader()
+        if self.args.mode == 'train':
+            self.get_dataloader()
         self.criterion = nn.CrossEntropyLoss()
 
         # self.vit = VitClsModel("/Users/user/Desktop/model_file/vit-base-patch16-224")
@@ -83,8 +95,14 @@ class ViTImageClassificationModel(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         loss, accuracy = self.common_step(batch, batch_idx)
-
         return loss
+
+    def predict_step(self, batch, batch_idx):
+        pixel_values = batch['pixel_values']
+        logits = self(pixel_values)
+        predict_scores = F.softmax(logits, dim=1)
+        predict_labels = torch.argmax(predict_scores, dim=-1)
+        return predict_scores, predict_labels
 
     def configure_optimizers(self):
         # We could make the optimizer more fancy by adding a scheduler and specifying which parameters do
@@ -100,4 +118,8 @@ class ViTImageClassificationModel(pl.LightningModule):
 
     def val_dataloader(self):
         return self.valid_dl
+
+    def get_test_dataloader(self, path):
+        test_loader = build_test_dataloader(path, batch_size=64, vit_path=self.args.pretrain_path)
+        return test_loader
 

@@ -22,7 +22,7 @@ def collate_fn(examples):
     return {"pixel_values": pixel_values, "labels": labels}
 
 
-def image_dataset_transform_process(processor, trainset, validset):
+def image_dataset_transform_process(processor, raw_dataset, type='train'):
     image_mean = processor.image_mean
     image_std = processor.image_std
     size = processor.size["height"]
@@ -57,9 +57,11 @@ def image_dataset_transform_process(processor, trainset, validset):
         examples['pixel_values'] = [_val_transforms(image.convert("RGB")) for image in examples['img']]
         return examples
 
-    trainset.set_transform(train_transforms)
-    validset.set_transform(val_transforms)
-    return trainset, validset
+    if type == 'train':
+        raw_dataset.set_transform(train_transforms)
+    else:
+        raw_dataset.set_transform(val_transforms)
+    return raw_dataset
 
 
 def build_dataloader(fp, batch_size, vit_path):
@@ -70,7 +72,8 @@ def build_dataloader(fp, batch_size, vit_path):
     valid_ds_raw = load_dataset('csv', data_dir='/data/yxlian/leaderface/', data_files='testset_leaderface01.csv',
                                 split='train')
 
-    train_ds, valid_ds = image_dataset_transform_process(processor, train_ds_raw, valid_ds_raw)
+    train_ds = image_dataset_transform_process(processor, train_ds_raw)
+    valid_ds = image_dataset_transform_process(processor, valid_ds_raw, type='valid')
 
     print('train_ds num: %s' % len(train_ds))
     print('valid_ds num: %s' % len(valid_ds))
@@ -79,6 +82,21 @@ def build_dataloader(fp, batch_size, vit_path):
     valid_dataloader = DataLoader(valid_ds, collate_fn=collate_fn, batch_size=batch_size)
 
     return train_dataloader, valid_dataloader
+
+
+def build_test_dataloader(fp, batch_size, vit_path):
+    processor = ViTImageProcessor.from_pretrained(vit_path)
+
+    test_ds_raw = load_dataset('csv', data_files=fp,
+                                split='train')
+
+    test_ds = image_dataset_transform_process(processor, test_ds_raw, type='valid')
+
+    print('test_ds num: %s' % len(test_ds))
+
+    test_dataloader = DataLoader(test_ds, collate_fn=collate_fn, batch_size=batch_size)
+
+    return test_dataloader
 
 
 if __name__ == '__main__':
